@@ -1,46 +1,56 @@
 import streamlit as st
-
-st.set_page_config(page_title="Maize Disease Diagnosis", page_icon="🌽", layout="wide")
-
-st.title("🌽 Maize Disease Diagnosis Tool")
-st.markdown("""
-Welcome! Enter the observed symptoms and current conditions of your maize crop. 
-The tool will predict possible diseases and rank them by likelihood.
-""")
 import mysql.connector
+import pandas as pd
 
 # -----------------------------
-# 1️⃣ Connect to MariaDB
+# 1️ Page setup
+# -----------------------------
+st.set_page_config(page_title="Maize Disease Diagnosis", page_icon="🌽", layout="wide")
+st.title("🌽 Maize Disease Diagnosis Tool")
+st.markdown("""
+Welcome! Select the symptoms observed and current conditions of your maize crop.
+The tool will predict possible diseases and rank them by likelihood.
+""")
+
+# -----------------------------
+# 2️ Connect to MariaDB
 # -----------------------------
 conn = mysql.connector.connect(
     host="localhost",
     user="root",
-    password="",  # put your MariaDB root password here
+    password="",  # put your password here
     database="maize_diseases"
 )
 cursor = conn.cursor()
 
 # -----------------------------
-# 2️⃣ Streamlit UI
+# 3️ Fetch all symptoms and conditions from DB
 # -----------------------------
-st.title("🌽 Maize Disease Diagnosis Tool")
+cursor.execute("SELECT DISTINCT symptom FROM has_symptom")
+all_symptoms = [row[0] for row in cursor.fetchall()]
 
-st.write("Enter observed symptoms and current conditions:")
+cursor.execute("SELECT DISTINCT condition_name FROM triggered_by")
+all_conditions = [row[0] for row in cursor.fetchall()]
 
-# Input: symptoms
-symptoms_input = st.text_input("Symptoms (comma-separated)", "LeafSpots, RustPustules")
-symptoms = [s.strip().title() for s in symptoms_input.split(',')]
+cursor.execute("SELECT DISTINCT disease FROM has_symptom")
+all_diseases = [row[0] for row in cursor.fetchall()]
 
-# Input: conditions
-conditions_input = st.text_input("Conditions (comma-separated, optional)", "HighHumidity")
-conditions = [c.strip().title() for c in conditions_input.split(',')] if conditions_input else []
+# -----------------------------
+# 4️ Sidebar selection
+# -----------------------------
+st.sidebar.header("Select Input Options")
 
-# Button: Diagnose
-if st.button("Diagnose"):
+symptoms = st.sidebar.multiselect("Observed Symptoms:", all_symptoms)
+conditions = st.sidebar.multiselect("Current Conditions:", all_conditions)
 
-    # -----------------------------
-    # 3️⃣ Initialize disease scoring
-    # -----------------------------
+st.sidebar.markdown("---")
+st.sidebar.header("Optional Analysis")
+show_analysis = st.sidebar.checkbox("Show Disease Statistics")
+
+# -----------------------------
+# 5️ Disease scoring function
+# -----------------------------
+def diagnose(symptoms, conditions):
     disease_scores = {}
 
     # Score based on symptoms
@@ -76,18 +86,70 @@ if st.button("Diagnose"):
         for (co_disease,) in cursor.fetchall():
             disease_scores[co_disease] = disease_scores.get(co_disease, 0) + 1
 
-    # -----------------------------
-    # 4️⃣ Display results
-    # -----------------------------
-    if disease_scores:
-        st.subheader("Possible diseases ranked by likelihood:")
-        for disease, score in sorted(disease_scores.items(), key=lambda x: x[1], reverse=True):
-            st.write(f"- {disease} (score: {score})")
-    else:
-        st.write("No diseases found for the given symptoms and conditions.")
+    return disease_scores
 
 # -----------------------------
-# 5️⃣ Close connection
+# 6️ Diagnose button
+# -----------------------------
+if st.button("Diagnose"):
+    if not symptoms and not conditions:
+        st.warning("Please select at least one symptom or condition.")
+    else:
+        scores = diagnose(symptoms, conditions)
+
+        if scores:
+            df = pd.DataFrame(
+                sorted(scores.items(), key=lambda x: x[1], reverse=True),
+                columns=["Disease", "Score"]
+            )
+
+            st.subheader("📊 Possible Diseases Ranked by Likelihood")
+            st.bar_chart(df.set_index("Disease"))
+            st.table(df)
+
+            # -----------------------------
+            # 7️ Prevention tips
+            # -----------------------------
+            prevention_tips = {
+                "Rust": "Use resistant varieties, apply fungicides.",
+                "MLND": "Use clean seed, control insect vectors.",
+                "Blight": "Avoid dense planting, fungicide application.",
+                "EarRot": "Ensure good storage and drying.",
+                "Anthracnose": "Control humidity and remove infected debris.",
+                "DiplodiaEarRot": "Rotate crops and ensure good drying.",
+                "DownyMildew": "Improve drainage and reduce humidity.",
+                "GrayLeafSpot": "Avoid wet foliage, rotate crops.",
+                "AspergillusRot": "Good storage and hygiene.",
+                "MosaicVirus": "Control insect vectors.",
+                "FusariumWilt": "Use resistant varieties and rotate crops.",
+                "StalkRot": "Avoid dense planting and high humidity.",
+                "LeafCurl": "Control insect vectors."
+            }
+
+            st.subheader("🌿 Suggested Prevention/Control Measures")
+            for disease, _ in df.head(5).values:  # show top 5
+                tip = prevention_tips.get(disease, "No tips available.")
+                st.write(f"- **{disease}**: {tip}")
+        else:
+            st.write("No diseases found for the selected symptoms and conditions.")
+
+# -----------------------------
+# 8️ Optional analysis tab
+# -----------------------------
+if show_analysis:
+    st.subheader("📈 Disease Occurrence Statistics")
+    cursor.execute("SELECT disease, COUNT(*) FROM has_symptom GROUP BY disease ORDER BY COUNT(*) DESC")
+    analysis_data = cursor.fetchall()
+    if analysis_data:
+        df_analysis = pd.DataFrame(analysis_data, columns=["Disease", "Number of Symptoms"])
+        st.bar_chart(df_analysis.set_index("Disease"))
+        st.table(df_analysis)
+    else:
+        st.write("No data available for analysis.")
+
+# -----------------------------
+# 9️ Close DB connection
 # -----------------------------
 cursor.close()
 conn.close()
+
