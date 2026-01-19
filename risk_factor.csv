@@ -1,0 +1,16 @@
+disease,symptom_or_condition
+MLND,LatePlanting
+MLND,DensePlanting
+Rust,HighHumidity
+Blight,HighHumidity
+DownyMildew,WetSoils
+GrayLeafSpot,HighTemp
+Smut,ContaminatedSeed
+RootRot,PoorDrainage
+EarRot,HighHumidity
+Wilt,Drought
+MosaicVirus,InsectVector
+FusariumWilt,PoorDrainage
+StalkRot,HighTemp
+DiplodiaEarRot,MechanicalInjury
+AspergillusRot,HighTemp

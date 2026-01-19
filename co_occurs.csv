@@ -1,0 +1,10 @@
+disease1,disease2
+Rust,GrayLeafSpot
+EarRot,AspergillusRot
+Smut,EarRot
+DownyMildew,Blight
+RootRot,FusariumWilt
+MLND,MosaicVirus
+Anthracnose,GrayLeafSpot
+StalkRot,RootRot
+DiplodiaEarRot,AspergillusRot

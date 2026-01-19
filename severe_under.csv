@@ -1,0 +1,11 @@
+disease,symptom_or_condition
+MLND,HighHumidity
+Rust,HighHumidity
+DownyMildew,WetSoils
+GrayLeafSpot,HighTemp
+StalkRot,HighTemp
+EarRot,HighHumidity
+FusariumWilt,WetSoils
+Anthracnose,HighHumidity
+DiplodiaEarRot,HighHumidity
+AspergillusRot,HighTemp
